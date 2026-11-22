@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}{{ relative_path }} · SentryTrace{% endblock %}
+{% block content %}<p class="tag">PROTECTED FILE · {{ folder.project_name }}</p><h1>{{ relative_path }}</h1>
+{% if content_truncated %}<p class="muted">Preview limited to the first 20,000 characters.</p>{% endif %}
+<section class="panel"><pre class="file-preview">{{ content }}</pre></section>
+<div class="button-row"><a class="button secondary" href="{% url 'folder_detail' folder.pk %}">Back to folder</a>{% if can_edit %}<a class="button secondary" href="{% url 'protected_file' folder.pk relative_path %}?action=edit">Edit</a>{% endif %}{% if can_copy %}<a class="button secondary" href="{% url 'protected_file' folder.pk relative_path %}?action=copy">Copy</a>{% endif %}</div>{% endblock %}

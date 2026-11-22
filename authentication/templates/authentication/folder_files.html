@@ -1,0 +1,6 @@
+{% extends 'base.html' %}{% block title %}{{ folder.project_name }} files · SentryTrace{% endblock %}{% block content %}
+<p class="tag">PROTECTED DATA</p><h1>{{ folder.project_name }}</h1><p>Authorized files under <code>{{ folder.folder_path }}</code>.</p>
+<section class="panel"><div class="table-wrap"><table><thead><tr><th>File path</th><th>Permissions</th><th>Actions</th></tr></thead><tbody>
+{% for file in files %}<tr><td><span class="stat-icon">📄</span><a class="file-link" href="{% url 'protected_file' folder.pk file.path %}?action=view">{{ file.path }}</a></td><td><span class="tag ok">View</span>{% if file.can_edit %} <span class="tag ok">Edit</span>{% endif %}{% if file.can_copy %} <span class="tag ok">Copy</span>{% endif %}</td><td><a class="button small" href="{% url 'protected_file' folder.pk file.path %}?action=view">View file</a>{% if file.can_edit %} <a class="button small secondary" href="{% url 'protected_file' folder.pk file.path %}?action=edit">Edit</a>{% endif %}{% if file.can_copy %} <a class="button small secondary" href="{% url 'protected_file' folder.pk file.path %}?action=copy">Copy</a>{% endif %}</td></tr>
+{% empty %}<tr><td colspan="3" class="empty">No files are visible to your role in this folder.</td></tr>{% endfor %}
+</tbody></table></div></section>{% endblock %}

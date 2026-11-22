@@ -1,0 +1,69 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}SentryTrace{% endblock %}</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9B%A1%EF%B8%8F%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="{% static 'authentication/app.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="{% if user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'login' %}{% endif %}"><span class="brand-mark">🛡️</span>SentryTrace <span>SECURE RESEARCH ACCESS</span></a>
+      <nav aria-label="Main navigation">
+        {% if user.is_authenticated %}
+          {% if user.role.role_name|lower == 'administrator' %}
+            <a class="{% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}" href="{% url 'admin_dashboard' %}">Dashboard</a>
+            <a class="{% if request.resolver_match.url_name == 'folders' or request.resolver_match.url_name == 'folder_access' or request.resolver_match.url_name == 'folder_detail' or request.resolver_match.url_name == 'folder_action' or request.resolver_match.url_name == 'protected_file' %}active{% endif %}" href="{% url 'folders' %}">My folders</a>
+            <a class="{% if request.resolver_match.url_name == 'pending_users' or request.resolver_match.url_name == 'approve_user' or request.resolver_match.url_name == 'reject_user' or request.resolver_match.url_name == 'update_user_status' %}active{% endif %}" href="{% url 'pending_users' %}">Users</a>
+            <a class="{% if request.resolver_match.url_name == 'manage_folders' or request.resolver_match.url_name == 'admin_access_management' %}active{% endif %}" href="{% url 'manage_folders' %}">Folders &amp; permissions</a>
+            <a class="{% if request.resolver_match.url_name == 'alert_list' or request.resolver_match.url_name == 'resolve_alert' %}active{% endif %}" href="{% url 'alert_list' %}">Alerts</a>
+            <a class="{% if request.resolver_match.url_name == 'report_view' %}active{% endif %}" href="{% url 'report_view' %}">Reports</a>
+            <a class="{% if request.resolver_match.url_name == 'audit_log_list' %}active{% endif %}" href="{% url 'audit_log_list' %}">Audit</a>
+          {% else %}
+            <a class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Dashboard</a>
+            <a class="{% if request.resolver_match.url_name == 'folders' or request.resolver_match.url_name == 'folder_access' or request.resolver_match.url_name == 'folder_detail' or request.resolver_match.url_name == 'folder_action' or request.resolver_match.url_name == 'protected_file' %}active{% endif %}" href="{% url 'folders' %}">My folders</a>
+          {% endif %}
+          <a class="{% if request.resolver_match.url_name == 'mfa_verify' %}active{% endif %}" href="{% url 'mfa_verify' %}">MFA settings</a>
+          <div class="theme-switcher" role="group" aria-label="Choose accent colour">
+            <button class="tc tc-blue" type="button" title="Blue" aria-label="Blue theme" data-theme="theme-blue"></button>
+            <button class="tc tc-teal" type="button" title="Teal" aria-label="Teal theme" data-theme="theme-teal"></button>
+            <button class="tc tc-purple" type="button" title="Purple" aria-label="Purple theme" data-theme="theme-purple"></button>
+            <button class="tc tc-green" type="button" title="Green" aria-label="Green theme" data-theme="theme-green"></button>
+            <button class="tc tc-red" type="button" title="Red" aria-label="Red theme" data-theme="theme-red"></button>
+          </div>
+          <span class="nav-user">{{ user.username }}</span>
+          <form class="inline" method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link-button" type="submit">Sign out</button></form>
+        {% else %}
+          <a class="{% if request.resolver_match.url_name == 'login' %}active{% endif %}" href="{% url 'login' %}">Sign in</a>
+          <a class="{% if request.resolver_match.url_name == 'register' %}active{% endif %}" href="{% url 'register' %}">Register</a>
+        {% endif %}
+      </nav>
+    </header>
+    {% if messages %}<section class="flash-list" aria-live="polite">{% for message in messages %}<div class="flash {{ message.tags }}">{{ message }}</div>{% endfor %}</section>{% endif %}
+    <main class="content">{% block content %}{% endblock %}</main>
+    <footer>SentryTrace · Research data access control · &copy; {% now "Y" %}</footer>
+  </div>
+  <script>
+    (function () {
+      const themes = ["theme-blue", "theme-teal", "theme-purple", "theme-green", "theme-red"];
+      function apply(theme) {
+        document.body.classList.remove(...themes);
+        if (themes.includes(theme)) document.body.classList.add(theme);
+        localStorage.setItem("st-theme", themes.includes(theme) ? theme : "");
+        document.querySelectorAll(".tc").forEach(function (button) {
+          button.classList.toggle("active", button.dataset.theme === theme);
+        });
+      }
+      apply(localStorage.getItem("st-theme") || "theme-blue");
+      document.querySelectorAll(".tc").forEach(function (button) {
+        button.addEventListener("click", function () {
+          apply(button.dataset.theme);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,299 @@
+{% extends 'base.html' %}{% load tz %}
+{% block title %}Administrator dashboard · SentryTrace{% endblock %}
+{% block content %}
+<style>
+  .dash-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 100%; background: #0f172a; }
+  .dash-sidebar { padding: 20px 0; border-right: 1px solid #1e293b; background: #0f172a; }
+  .dash-sidebar-title { display: block; margin: 0 20px 16px; color: #64748b; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+  .dash-sidebar a { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 10px 20px; border-left: 3px solid transparent; color: #94a3b8; font-size: 14px; text-decoration: none; transition: background .2s ease, color .2s ease; }
+  .dash-sidebar a:hover { background: rgba(59,130,246,.1); color: #60a5fa; }
+  .dash-sidebar a.active { border-left-color: #3b82f6; background: rgba(59,130,246,.2); color: #60a5fa; }
+  .dash-sidebar-icon { width: 20px; text-align: center; }
+  .dash-main { min-width: 0; padding: 24px; background: #0f172a; }
+  .dash-topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
+  .dash-title-wrap { display: flex; align-items: center; gap: 12px; }
+  .dash-home { display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; border: 1px solid #334155; border-radius: 10px; background: #1e293b; color: #60a5fa; font-size: 20px; text-decoration: none; }
+  .dash-home:hover { border-color: #3b82f6; color: #93c5fd; }
+  .dash-topbar h1 { margin: 0; color: #fff; font-size: 22px; font-weight: 750; line-height: 1.25; }
+  .dash-welcome { margin: 5px 0 0; color: #94a3b8; font-size: 14px; }
+  .dash-profile { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
+  .dash-role-badge { padding: 5px 9px; border: 1px solid #7c3aed; border-radius: 20px; color: #a78bfa; font-size: 12px; font-weight: 700; letter-spacing: .04em; }
+  .dash-identity { display: grid; gap: 1px; }
+  .dash-identity-name { color: #e2e8f0; font-size: 12px; font-weight: 600; }
+  .dash-identity-role { color: #94a3b8; font-size: 11px; }
+  .dash-bell { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; color: #cbd5e1; font-size: 19px; text-decoration: none; }
+  .dash-bell-count { position: absolute; top: -3px; right: -5px; display: grid; min-width: 17px; height: 17px; place-items: center; padding: 0 4px; border-radius: 10px; background: #ef4444; color: #fff; font-size: 10px; font-weight: 700; }
+  .dash-avatar { display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: #3b82f6; color: #fff; font-size: 17px; font-weight: 700; }
+  .dash-stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 12px; }
+  .dash-stat-card { min-width: 0; padding: 18px 20px; border: 1px solid #334155; border-bottom: 3px solid #3b82f6; border-radius: 12px; background: #1e293b; box-shadow: 0 4px 20px rgba(0,0,0,.4); }
+  .dash-stat-card--folders { border-bottom-color: #8b5cf6; }
+  .dash-stat-card--integrity-ok { border-bottom-color: #10b981; }
+  .dash-stat-card--integrity-failed, .dash-stat-card--alerts { border-bottom-color: #ef4444; }
+  .dash-stat-icon { display: block; margin-bottom: 8px; font-size: 21px; }
+  .dash-stat-label { display: block; color: #94a3b8; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .dash-stat-number { display: block; margin-top: 5px; color: #fff; font-size: 36px; font-weight: 750; line-height: 1.1; overflow-wrap: anywhere; }
+  .dash-stat-number--ok { color: #10b981; font-size: 18px; }
+  .dash-stat-number--failed { color: #ef4444; font-size: 18px; }
+  .dash-live { display: flex; align-items: center; gap: 7px; margin-top: 9px; color: #10b981; font-size: 12px; }
+  .dash-live-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 0 0 rgba(16,185,129,.65); animation: dash-pulse 1.8s infinite; }
+  .dash-stat-note { display: block; margin-top: 9px; color: #a78bfa; font-size: 12px; }
+  @keyframes dash-pulse { 70% { box-shadow: 0 0 0 7px rgba(16,185,129,0); } 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); } }
+  .dash-stat-link { display: inline-block; margin-top: 8px; color: #60a5fa; font-size: 12px; font-weight: 600; }
+  .dash-alert-breakdown { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; color: #cbd5e1; font-size: 11px; }
+  .dash-alert-breakdown-high { color: #f87171; }
+  .dash-alert-breakdown-medium { color: #fbbf24; }
+  .dash-alert-breakdown-low { color: #34d399; }
+  .dash-legacy-stats { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0 0 20px; padding: 10px 13px; border: 1px solid #263449; border-radius: 9px; background: rgba(30,41,59,.55); color: #94a3b8; font-size: 12px; }
+  .dash-legacy-stats strong { color: #e2e8f0; font-weight: 700; }
+  .dash-middle { display: grid; grid-template-columns: minmax(0, 1.86fr) minmax(270px, 1fr); align-items: start; gap: 16px; margin-bottom: 16px; scroll-margin-top: 16px; }
+  .dash-right-column { display: grid; gap: 16px; }
+  .dash-card { min-width: 0; margin: 0 0 16px; padding: 18px; border: 1px solid #334155; border-radius: 12px; background: #1e293b; box-shadow: 0 4px 20px rgba(0,0,0,.4); scroll-margin-top: 16px; }
+  .dash-middle > .dash-card, .dash-right-column > .dash-card { margin-bottom: 0; }
+  .dash-card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .dash-card-header h2 { margin: 0; color: #f8fafc; font-size: 15px; font-weight: 700; }
+  .dash-card-header a { flex: 0 0 auto; color: #60a5fa; font-size: 12px; font-weight: 600; text-decoration: none; }
+  .dash-card-header a:hover { color: #bfdbfe; text-decoration: underline; }
+  .dash-table-wrap { width: 100%; overflow-x: auto; }
+  .dash-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .dash-table th { padding: 9px 10px; border-bottom: 1px solid #334155; color: #94a3b8; font-size: 10px; letter-spacing: .07em; text-align: left; text-transform: uppercase; white-space: nowrap; }
+  .dash-table td { padding: 10px; border-bottom: 1px solid rgba(51,65,85,.65); color: #e2e8f0; vertical-align: middle; }
+  .dash-log-row { border-left: 3px solid #10b981; }
+  .dash-log-row--flagged { border-left-color: #f59e0b; background: rgba(245,158,11,.05); }
+  .dash-log-row--blocked { border-left-color: #ef4444; background: rgba(239,68,68,.05); }
+  .dash-action-badge, .dash-status-badge { display: inline-block; padding: 3px 8px; border: 1px solid transparent; border-radius: 20px; background: rgba(148,163,184,.14); color: #cbd5e1; font-size: 10px; font-weight: 700; white-space: nowrap; }
+  .dash-action--login { background: rgba(59,130,246,.16); color: #93c5fd; }
+  .dash-action--failed, .dash-action--delete { background: rgba(239,68,68,.16); color: #fca5a5; }
+  .dash-action--edit { background: rgba(245,158,11,.16); color: #fcd34d; }
+  .dash-action--copy { background: rgba(139,92,246,.18); color: #c4b5fd; }
+  .dash-action--view { background: rgba(148,163,184,.15); color: #cbd5e1; }
+  .dash-status--ok, .dash-login--success { background: rgba(16,185,129,.15); color: #6ee7b7; }
+  .dash-status--flagged { background: rgba(245,158,11,.16); color: #fcd34d; }
+  .dash-status--blocked, .dash-login--failed { background: rgba(239,68,68,.16); color: #fca5a5; }
+  .dash-ellipsis { display: inline-block; max-width: 230px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; white-space: nowrap; }
+  .dash-role-dot { display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: #64748b; }
+  .dash-role-dot--admin { background: #a78bfa; }
+  .dash-role-dot--researcher { background: #60a5fa; }
+  .dash-login-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 10px 0; border-bottom: 1px solid rgba(51,65,85,.65); }
+  .dash-login-user { color: #e2e8f0; font-size: 12px; font-weight: 600; }
+  .dash-login-time { color: #94a3b8; font-size: 11px; }
+  .dash-login-meta { grid-column: 1; color: #94a3b8; font-size: 11px; }
+  .dash-login-row .dash-status-badge { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+  .dash-alert-row { display: grid; grid-template-columns: auto minmax(110px, 1fr) minmax(90px, .7fr) auto auto; align-items: center; gap: 11px; margin-top: 9px; padding: 11px 12px; border: 1px solid #334155; border-left: 4px solid #10b981; border-radius: 8px; background: rgba(255,255,255,.015); }
+  .dash-alert-row--high { border-left-color: #ef4444; background: rgba(239,68,68,.06); }
+  .dash-alert-row--medium { border-left-color: #f59e0b; }
+  .dash-alert-row--low { border-left-color: #10b981; }
+  .dash-alert-severity { padding: 3px 8px; border-radius: 20px; background: rgba(16,185,129,.15); color: #34d399; font-size: 10px; font-weight: 700; }
+  .dash-alert-row--high .dash-alert-severity { background: rgba(239,68,68,.16); color: #fca5a5; }
+  .dash-alert-row--medium .dash-alert-severity { background: rgba(245,158,11,.16); color: #fcd34d; }
+  .dash-alert-type { color: #f1f5f9; font-size: 12px; font-weight: 600; }
+  .dash-alert-user, .dash-alert-time { color: #94a3b8; font-size: 11px; white-space: nowrap; }
+  .dash-resolve { min-height: 30px; padding: 5px 9px; border: 1px solid #475569; border-radius: 6px; background: transparent; color: #cbd5e1; font: inherit; font-size: 11px; cursor: pointer; }
+  .dash-resolve:hover { border-color: #ef4444; color: #fca5a5; }
+  .dash-empty { padding: 14px; border: 1px solid rgba(16,185,129,.25); border-radius: 8px; background: rgba(16,185,129,.08); color: #6ee7b7; font-size: 13px; }
+  .dash-hash { color: #bfdbfe; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; white-space: nowrap; }
+  .dash-quick-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+  .dash-quick-link { display: flex; align-items: center; gap: 11px; min-height: 60px; padding: 15px 20px; border: 1px solid #334155; border-radius: 12px; background: #1e293b; color: #e2e8f0; font-size: 13px; font-weight: 650; text-decoration: none; transition: border-color .2s ease, background .2s ease, transform .2s ease; }
+  .dash-quick-link:hover { transform: translateY(-2px); border-color: #3b82f6; background: rgba(59,130,246,.05); color: #fff; text-decoration: none; }
+  .dash-quick-icon { font-size: 18px; }
+  @media (max-width: 1100px) {
+    .dash-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dash-middle { grid-template-columns: minmax(0, 1.5fr) minmax(240px, 1fr); }
+  }
+  @media (max-width: 800px) {
+    .dash-layout { grid-template-columns: 1fr; }
+    .dash-sidebar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; padding: 10px; border-right: 0; border-bottom: 1px solid #1e293b; }
+    .dash-sidebar-title { grid-column: 1 / -1; margin: 0 10px 4px; }
+    .dash-sidebar a { padding: 9px 10px; border-left: 0; border-radius: 7px; }
+    .dash-sidebar a.active { border-left: 0; }
+    .dash-main { padding: 20px 16px; }
+    .dash-middle { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .dash-topbar { align-items: flex-start; flex-direction: column; }
+    .dash-profile { width: 100%; justify-content: space-between; }
+    .dash-stat-grid, .dash-quick-actions { grid-template-columns: 1fr; }
+    .dash-sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dash-card { padding: 14px; }
+    .dash-alert-row { grid-template-columns: auto minmax(0, 1fr); }
+    .dash-alert-user, .dash-alert-time { grid-column: 2; }
+    .dash-alert-row form { grid-column: 1 / -1; }
+    .dash-card-header { align-items: flex-start; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dash-live-dot, .dash-quick-link { animation: none; transition: none; }
+  }
+</style>
+
+<div class="dash-layout">
+  <aside class="dash-sidebar" aria-label="Dashboard sections">
+    <span class="dash-sidebar-title">Operations</span>
+    <a class="active" href="#overview"><span class="dash-sidebar-icon">🏠</span>Overview</a>
+    <a href="#access"><span class="dash-sidebar-icon">🔐</span>Access Control</a>
+    <a href="#logs"><span class="dash-sidebar-icon">📁</span>File Watcher &amp; Logs</a>
+    <a href="#hash"><span class="dash-sidebar-icon">🔗</span>Hash Audit Trail</a>
+    <a href="#alerts"><span class="dash-sidebar-icon">🚨</span>Anomaly Alerts</a>
+    <a href="{% url 'manage_folders' %}"><span class="dash-sidebar-icon">⚙️</span>System Settings</a>
+  </aside>
+
+  <main class="dash-main">
+    <header class="dash-topbar">
+      <div class="dash-title-wrap">
+        <a class="dash-home" href="{% url 'admin_dashboard' %}" aria-label="Administrator dashboard">⌂</a>
+        <div>
+          <h1>System Overview | Administrator</h1>
+          <p class="dash-welcome">Welcome back, {{ request.user.username }}</p>
+        </div>
+      </div>
+      <div class="dash-profile">
+        <span class="dash-role-badge">ADMINISTRATOR</span>
+        <a class="dash-bell" href="{% url 'alert_list' %}" aria-label="Open alerts">🔔<span class="dash-bell-count">{{ open_alerts }}</span></a>
+        <span class="dash-identity"><span class="dash-identity-name">{{ request.user.full_name|default:request.user.username }}</span><span class="dash-identity-role">{{ request.user.role.role_name|default:"Administrator" }}</span></span>
+        <span class="dash-avatar" aria-label="{{ request.user.username }}">{{ request.user.username|slice:':1'|upper }}</span>
+      </div>
+    </header>
+
+    <section class="dash-stat-grid" id="overview" aria-label="System overview">
+      <article class="dash-stat-card">
+        <span class="dash-stat-icon">🔐</span>
+        <span class="dash-stat-label">Active User Sessions</span>
+        <strong class="dash-stat-number">{{ active_sessions }}</strong>
+        <span class="dash-live"><span class="dash-live-dot"></span>Live</span>
+      </article>
+      <article class="dash-stat-card dash-stat-card--folders">
+        <span class="dash-stat-icon">📁</span>
+        <span class="dash-stat-label">Monitored Folders</span>
+        <strong class="dash-stat-number">{{ folders_count }}</strong>
+        <span class="dash-stat-note">Protected folders</span>
+      </article>
+      <article class="dash-stat-card {% if chain_ok %}dash-stat-card--integrity-ok{% else %}dash-stat-card--integrity-failed{% endif %}" id="access">
+        <span class="dash-stat-icon">🔗</span>
+        <span class="dash-stat-label">Integrity Status</span>
+        {% if chain_ok %}<strong class="dash-stat-number dash-stat-number--ok">✅ Verified</strong>{% else %}<strong class="dash-stat-number dash-stat-number--failed">⚠ Mismatch</strong>{% endif %}
+        <a class="dash-stat-link" href="{% url 'audit_log_list' %}">Run audit →</a>
+      </article>
+      <article class="dash-stat-card dash-stat-card--alerts">
+        <span class="dash-stat-icon">🚨</span>
+        <span class="dash-stat-label">Open Alerts</span>
+        <strong class="dash-stat-number">{{ open_alerts }}</strong>
+        <div class="dash-alert-breakdown">
+          <span class="dash-alert-breakdown-high">🔴 High: {{ high_alerts }}</span>
+          <span class="dash-alert-breakdown-medium">🟡 Medium: {{ medium_alerts }}</span>
+          <span class="dash-alert-breakdown-low">🟢 Low: {{ low_alerts }}</span>
+        </div>
+      </article>
+    </section>
+
+    <div class="dash-legacy-stats" aria-label="Additional administrator statistics">
+      <span>Events today: <strong>{{ event_count }}</strong></span>
+      <span>Pending approvals: <strong>{{ pending_count }}</strong></span>
+      <span>Active accounts: <strong>{{ active_count }}</strong></span>
+    </div>
+
+    <section class="dash-middle" id="logs">
+      <article class="dash-card">
+        <div class="dash-card-header">
+          <h2>📡 File Monitoring &amp; Real-Time Event Log</h2>
+          <a href="{% url 'audit_log_list' %}">View full log →</a>
+        </div>
+        <div class="dash-table-wrap">
+          <table class="dash-table">
+            <thead><tr><th>Timestamp</th><th>Action</th><th>File Path</th><th>Triggered By</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for event in recent_events %}
+                <tr class="dash-log-row{% if event.outcome == 'BLOCKED' %} dash-log-row--blocked{% elif event.outcome == 'FLAGGED' %} dash-log-row--flagged{% endif %}">
+                  <td>{{ event.event_time|localtime|date:"H:i:s" }}</td>
+                  <td><span class="dash-action-badge{% if event.event_type == 'login_success' or event.event_type == 'login' %} dash-action--login{% elif event.event_type == 'login_denied' or event.event_type == 'mfa_denied' or event.event_type == 'mfa_email_denied' %} dash-action--failed{% elif event.event_type == 'view' or event.event_type == 'view_ok' %} dash-action--view{% elif event.event_type == 'edit' or event.event_type == 'edit_ok' %} dash-action--edit{% elif event.event_type == 'copy' or event.event_type == 'copy_ok' %} dash-action--copy{% elif event.event_type == 'delete' %} dash-action--delete{% endif %}">{{ event.event_type }}</span></td>
+                  <td>{% with details=event.file_path|default:event.details %}<span class="dash-ellipsis" title="{{ details }}">{% if details|length > 55 %}{{ details|slice:':55' }}...{% else %}{{ details }}{% endif %}</span>{% endwith %}</td>
+                  <td>{{ event.user.username|default:"System" }}</td>
+                  <td><span class="dash-status-badge{% if event.outcome == 'BLOCKED' %} dash-status--blocked{% elif event.outcome == 'FLAGGED' %} dash-status--flagged{% else %} dash-status--ok{% endif %}">{{ event.outcome }}</span></td>
+                </tr>
+              {% empty %}<tr><td colspan="5">No security events recorded.</td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <div class="dash-right-column">
+        <article class="dash-card">
+          <div class="dash-card-header"><h2>🔐 MFA &amp; Role Management</h2></div>
+          <div class="dash-table-wrap">
+            <table class="dash-table">
+              <thead><tr><th>Role</th><th>Users</th></tr></thead>
+              <tbody>
+                {% for role in role_counts %}
+                  <tr><td><span class="dash-role-dot{% if role.role_name|lower == 'administrator' %} dash-role-dot--admin{% elif role.role_name|lower == 'researcher' %} dash-role-dot--researcher{% endif %}"></span>{{ role.role_name }}</td><td>{{ role.user_count }}</td></tr>
+                {% empty %}<tr><td colspan="2">No roles configured.</td></tr>{% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="dash-card">
+          <div class="dash-card-header"><h2>Recent Logins</h2></div>
+          {% for event in recent_auth_events %}
+            <div class="dash-login-row">
+              <span class="dash-login-user">{{ event.user.username|default:"Unknown user" }}</span>
+              <span class="dash-login-meta">{{ event.ip_address|default:"IP unavailable" }}</span>
+              <span class="dash-login-time">{{ event.event_time|localtime|date:"H:i:s" }}</span>
+              {% if event.outcome == "BLOCKED" %}<span class="dash-status-badge dash-login--failed">Failed</span>{% else %}<span class="dash-status-badge dash-login--success">Logged in</span>{% endif %}
+            </div>
+          {% empty %}<p class="dash-empty">No recent authentication events.</p>{% endfor %}
+        </article>
+      </div>
+    </section>
+
+    <section class="dash-card" id="hash">
+      <div class="dash-card-header">
+        <h2>🔗 SHA-256 Hash Audit Trail</h2>
+        <span>
+          <a href="{% url 'audit_log_list' %}">🔄 Verify Integrity</a>
+          &nbsp;·&nbsp;
+          <a href="{% url 'report_view' %}">📥 Export CSV</a>
+        </span>
+      </div>
+      <div class="dash-table-wrap">
+        <table class="dash-table">
+          <thead><tr><th>Event #</th><th>Time</th><th>User</th><th>Event Type</th><th>Entry Hash</th><th>Prev Hash</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for r in rows %}
+              <tr class="dash-log-row{% if r.status == 'BLOCKED' %} dash-log-row--blocked{% elif r.status == 'FLAGGED' %} dash-log-row--flagged{% endif %}">
+                <td>{{ r.e.log_id }}</td>
+                <td>{{ r.e.event_time|localtime|date:"Y-m-d H:i:s" }}</td>
+                <td>{{ r.e.user.username|default:"System" }}</td>
+                <td><span class="dash-action-badge{% if r.e.event_type == 'login_success' or r.e.event_type == 'login' %} dash-action--login{% elif r.e.event_type == 'login_denied' or r.e.event_type == 'mfa_denied' or r.e.event_type == 'mfa_email_denied' %} dash-action--failed{% elif r.e.event_type == 'view' or r.e.event_type == 'view_ok' %} dash-action--view{% elif r.e.event_type == 'edit' or r.e.event_type == 'edit_ok' %} dash-action--edit{% elif r.e.event_type == 'copy' or r.e.event_type == 'copy_ok' %} dash-action--copy{% elif r.e.event_type == 'delete' %} dash-action--delete{% endif %}">{{ r.e.event_type }}</span></td>
+                <td><span class="dash-hash" title="{{ r.e.entry_hash }}">{{ r.e.entry_hash|slice:":16" }}...</span></td>
+                <td><span class="dash-hash" title="{{ r.e.prev_hash }}">{{ r.e.prev_hash|slice:":16" }}...</span></td>
+                <td><span class="dash-status-badge{% if r.status == 'BLOCKED' %} dash-status--blocked{% elif r.status == 'FLAGGED' %} dash-status--flagged{% else %} dash-status--ok{% endif %}">{{ r.status }}</span></td>
+              </tr>
+            {% empty %}<tr><td colspan="7">No audit entries recorded.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="dash-card" id="alerts">
+      <div class="dash-card-header">
+        <h2>🚨 Anomaly Alerts</h2>
+        <a href="{% url 'alert_list' %}">View all →</a>
+      </div>
+      {% for a in alerts %}
+        <div class="dash-alert-row{% if a.severity == 'high' %} dash-alert-row--high{% elif a.severity == 'medium' %} dash-alert-row--medium{% else %} dash-alert-row--low{% endif %}">
+          <span class="dash-alert-severity">{{ a.severity|upper }}</span>
+          <span class="dash-alert-type">{{ a.get_alert_type_display }}</span>
+          <span class="dash-alert-user">{{ a.log.user.username|default:"System" }}</span>
+          <time class="dash-alert-time">{{ a.created_at|localtime|date:"H:i" }}</time>
+          <form method="post" action="{% url 'resolve_alert' a.pk %}">{% csrf_token %}<button class="dash-resolve" type="submit">Resolve</button></form>
+        </div>
+      {% empty %}
+        <p class="dash-empty">✅ No open alerts at this time</p>
+      {% endfor %}
+    </section>
+
+    <nav class="dash-quick-actions" aria-label="Quick actions">
+      <a class="dash-quick-link" href="{% url 'pending_users' %}"><span class="dash-quick-icon">👥</span>Manage Users <span aria-hidden="true">→</span></a>
+      <a class="dash-quick-link" href="{% url 'admin_access_management' %}"><span class="dash-quick-icon">📁</span>Manage Folders <span aria-hidden="true">→</span></a>
+      <a class="dash-quick-link" href="{% url 'report_view' %}"><span class="dash-quick-icon">📊</span>Generate Report <span aria-hidden="true">→</span></a>
+    </nav>
+  </main>
+</div>
+{% endblock %}

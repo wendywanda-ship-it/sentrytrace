@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}My folders · SentryTrace{% endblock %}
+{% block content %}
+<p class="tag">ROLE: {{ user_role }}</p><h1>My folders</h1>
+<p>Folder grants apply to files unless an explicit file permission denies that action.</p>
+<section class="panel"><h2>Folders available to your role</h2><div class="table-wrap"><table><thead><tr><th>Project</th><th>Protected location</th><th>View</th><th>Edit</th><th>Copy</th><th>Open</th></tr></thead><tbody>
+  {% for row in folder_access_rows %}<tr><td>{{ row.folder.project_name }}</td><td><span class="muted">{{ row.folder.folder_path }}</span></td>
+    <td><span class="tag {% if row.permission.can_view %}ok{% else %}blocked{% endif %}">{% if row.permission.can_view %}Allowed{% else %}Denied{% endif %}</span></td>
+    <td><span class="tag {% if row.permission.can_edit %}ok{% else %}blocked{% endif %}">{% if row.permission.can_edit %}Allowed{% else %}Denied{% endif %}</span></td>
+    <td><span class="tag {% if row.permission.can_copy %}ok{% else %}blocked{% endif %}">{% if row.permission.can_copy %}Allowed{% else %}Denied{% endif %}</span></td>
+    <td><a class="button small" href="{% url 'folder_detail' row.folder.pk %}">Open</a></td></tr>
+  {% empty %}<tr><td class="empty" colspan="6">No folders have been shared with your role yet.</td></tr>{% endfor %}
+</tbody></table></div></section>
+<section class="panel"><h2>Explicit file access</h2><div class="table-wrap"><table><thead><tr><th>Project</th><th>File</th><th>Actions</th></tr></thead><tbody>
+  {% for item in file_permissions %}<tr><td>{{ item.permission.folder.project_name }}</td><td><code>{{ item.permission.file_path }}</code></td><td>{% if item.view %}<a class="button small" href="{% url 'protected_file' item.permission.folder.pk item.permission.file_path %}?action=view">View</a>{% endif %}{% if item.edit %}<a class="button small secondary" href="{% url 'protected_file' item.permission.folder.pk item.permission.file_path %}?action=edit">Edit</a>{% endif %}{% if item.copy %}<a class="button small secondary" href="{% url 'protected_file' item.permission.folder.pk item.permission.file_path %}?action=copy">Copy</a>{% endif %}</td></tr>
+  {% empty %}<tr><td class="empty" colspan="3">No explicit file permissions are assigned to your role.</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endblock %}

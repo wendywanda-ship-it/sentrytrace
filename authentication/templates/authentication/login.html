@@ -1,0 +1,6 @@
+{% extends 'base.html' %}{% block title %}Sign in · SentryTrace{% endblock %}{% block content %}
+<section class="auth-card"><p class="auth-brand"><span class="brand-mark">🛡️</span>SentryTrace</p><p class="auth-tagline">Secure access. Verified identity.</p><p class="tag">SECURE SIGN IN</p><h1>Welcome back</h1><p>Use your staff username and password. Your authenticator code is required next.</p>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form method="post" novalidate>{% csrf_token %}<label for="username">Username</label><input id="username" name="username" autocomplete="username" required autofocus>
+<label for="password">Password</label><input id="password" type="password" name="password" autocomplete="current-password" required>
+<div class="button-row"><button type="submit">Continue securely</button><a class="button secondary" href="{% url 'register' %}">Create account</a></div></form></section>{% endblock %}

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}{% load tz %}
+{% block title %}Folders and permissions · SentryTrace{% endblock %}
+{% block content %}
+<p class="tag">POLICY ADMINISTRATION</p><h1>Folders and permissions</h1>
+<p>Protected paths are relative to <code>PROTECTED_DATA_ROOT</code>. New folders are created on disk. Explicit file-level denies override folder permissions.</p>
+
+<div class="two-col">
+  <section class="panel"><h2>Create a protected folder</h2>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="create_folder">
+      <label for="project_name">Project name</label><input id="project_name" name="project_name" maxlength="100" required>
+      <label for="folder_path">Relative folder path</label><input id="folder_path" name="folder_path" placeholder="research/project-a" required>
+      <button type="submit">Create folder</button>
+    </form>
+  </section>
+  <section class="panel"><h2>Protected folders</h2><div class="table-wrap"><table><thead><tr><th>Project</th><th>On-disk path</th><th>Created</th></tr></thead><tbody>
+    {% for folder in folders %}<tr><td>{{ folder.project_name }}</td><td><code>{{ folder.folder_path }}</code></td><td>{{ folder.created_at|localtime|date:'Y-m-d H:i' }}</td></tr>{% empty %}<tr><td class="empty" colspan="3">No protected folders yet.</td></tr>{% endfor %}
+  </tbody></table></div></section>
+</div>
+
+<section class="panel"><h2>Folder role permission grid</h2>
+  <p>Each role’s folder permissions control view, edit, and copy. Save permissions per folder.</p>
+  {% for grid in folder_acl_grids %}
+  <form method="post" class="panel">{% csrf_token %}<input type="hidden" name="action" value="folder_acl_grid"><input type="hidden" name="folder_id" value="{{ grid.folder.pk }}">
+    <h3>{{ grid.folder.project_name }} <span class="muted">· {{ grid.folder.folder_path }}</span></h3>
+    <div class="table-wrap"><table><thead><tr><th>Role</th><th>View</th><th>Edit</th><th>Copy</th></tr></thead><tbody>
+      {% for row in grid.roles %}<tr><td>{{ row.role.role_name }}</td>
+        <td><input aria-label="{{ row.role.role_name }} view" style="width:auto" type="checkbox" name="role_{{ row.role.pk }}_can_view" {% if row.permission.can_view %}checked{% endif %}></td>
+        <td><input aria-label="{{ row.role.role_name }} edit" style="width:auto" type="checkbox" name="role_{{ row.role.pk }}_can_edit" {% if row.permission.can_edit %}checked{% endif %}></td>
+        <td><input aria-label="{{ row.role.role_name }} copy" style="width:auto" type="checkbox" name="role_{{ row.role.pk }}_can_copy" {% if row.permission.can_copy %}checked{% endif %}></td>
+      </tr>{% empty %}<tr><td colspan="4" class="empty">Create organizational roles on the Users page first.</td></tr>{% endfor %}
+    </tbody></table></div><button type="submit">Save folder permissions</button>
+  </form>
+  {% empty %}<p class="empty">Create a protected folder to configure role permissions.</p>{% endfor %}
+</section>
+
+<section class="panel"><h2>Set file permissions</h2>
+  <p>Upload a file or select one already under a protected folder. Use a relative path such as <code>notes/summary.txt</code>.</p>
+  <form method="post" enctype="multipart/form-data" class="two-col">{% csrf_token %}<input type="hidden" name="action" value="file_acl">
+    <div><label for="file_role">Role</label><select id="file_role" name="role_id" required>{% for role in roles %}<option value="{{ role.pk }}">{{ role.role_name }}</option>{% endfor %}</select>
+      <label for="file_folder">Folder</label><select id="file_folder" name="folder_id" required>{% for folder in folders %}<option value="{{ folder.pk }}">{{ folder.project_name }}</option>{% endfor %}</select>
+      <label for="file_path">Relative file path</label><input id="file_path" name="file_path" required></div>
+    <div><label for="upload">Upload optional file (10 MB max)</label><input id="upload" type="file" name="upload">
+      <label><input style="width:auto" type="checkbox" name="can_view"> View</label><label><input style="width:auto" type="checkbox" name="can_edit"> Edit / write</label><label><input style="width:auto" type="checkbox" name="can_copy"> Copy source</label>
+      <button type="submit">Save file permission</button></div>
+  </form>
+</section>
+
+<section class="panel"><h2>Current file permissions</h2><div class="table-wrap"><table><thead><tr><th>Role</th><th>File</th><th>View</th><th>Edit</th><th>Copy</th></tr></thead><tbody>
+  {% for p in file_permissions %}<tr><td>{{ p.role }}</td><td>{{ p.folder.project_name }}/{{ p.file_path }}</td><td>{{ p.can_view }}</td><td>{{ p.can_edit }}</td><td>{{ p.can_copy }}</td></tr>{% empty %}<tr><td colspan="5" class="empty">No file ACLs.</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endblock %}
